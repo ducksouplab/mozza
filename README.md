@@ -1,6 +1,6 @@
 # Mozza
 
-Smile transforming GStreamer plugin.
+GStreamer plugin for smile transformation.
 
 ## Dependencies
 
