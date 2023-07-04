@@ -1,0 +1,5 @@
+build
+data/out
+*.bz2
+*.dat
+core

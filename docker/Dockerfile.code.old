@@ -1,0 +1,42 @@
+FROM debian:bullseye
+ENV DLIB_VER 19.24
+
+RUN apt-get update
+RUN apt-get upgrade -y
+
+RUN apt-get update && apt-get install -y \
+        build-essential cmake pkg-config git meson \
+        libopencv-dev \
+        libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+        libgstreamer-plugins-bad1.0-dev \
+        libgstreamer-opencv1.0-0 \
+        gstreamer1.0-tools \
+        libopenblas-dev liblapack-dev  # dlib dependencies
+
+# dlib default model
+RUN apt-get update && apt-get install -y libdlib-data
+
+RUN mkdir -p /usr/local/src
+ADD http://dlib.net/files/dlib-$DLIB_VER.tar.bz2 /usr/local/src/
+RUN tar -xvf /usr/local/src/dlib-$DLIB_VER.tar.bz2 -C /usr/local/src/
+RUN mkdir -p /usr/local/src/dlib-$DLIB_VER/build
+WORKDIR /usr/local/src/dlib-$DLIB_VER/build
+RUN cmake -GNinja \
+        -DCMAKE_INSTALL_PREFIX:PATH=/usr \
+        -DCMAKE_INSTALL_LIBDIR:PATH=/usr/lib \
+        -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_SSE2_INSTRUCTIONS=ON \
+        -DUSE_SSE4_INSTRUCTIONS=ON \
+        -DUSE_AVX_INSTRUCTIONS=ON \
+        -DDLIB_USE_CUDA=OFF \
+        ".."
+RUN ninja
+RUN ninja install
+
+# needed only to run a few test pipelines (install encoders and muxers, and gst-discoverer-1.0)
+RUN apt-get update && apt-get install -y gstreamer1.0-plugins-base-apps gstreamer1.0-plugins-good gstreamer1.0-plugins-ugly gstreamer1.0-plugins-bad gstreamer1.0-libav
+
+WORKDIR /gstmozza
+
+COPY . .

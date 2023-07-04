@@ -1,0 +1,28 @@
+FROM ubuntu-cuda-gstreamer:ubuntu22.04-cuda11.7.0-gstreamer1.22.4
+
+RUN apt-get update
+RUN apt-get upgrade -y
+
+RUN apt-get update && apt-get install -y build-essential cmake pkg-config git meson ninja-build
+
+# build dependencies
+RUN apt-get update && apt-get install -y libsm-dev libxext-dev
+
+# dlib default model
+RUN apt-get update && apt-get install -y libdlib-data
+
+WORKDIR /gstmozza
+
+COPY . .
+
+RUN apt-get update && apt-get install -y libpthread-stubs0-dev
+RUN ln -s /usr/lib/x86_64-linux-gnu/libpthread.so.0 /usr/lib/x86_64-linux-gnu/libpthread-2.31.so
+
+RUN meson -Dbuildtype=release build
+RUN ninja -C build
+
+ENV PATH="${PATH}:/gstmozza/build"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/gstmozza/build/lib/x86_64-linux-gnu"
+ENV GST_PLUGIN_PATH="${GST_PLUGIN_PATH}:/gstmozza/build"
+
+CMD ["bash"]
