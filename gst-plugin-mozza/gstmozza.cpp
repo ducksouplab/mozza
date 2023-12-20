@@ -265,14 +265,13 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   find_landmarks(blurred_img, *mozza->shape_predictor, dets, faces_pts);
 
   std::vector<cv::Point2f> landmarks;
-  GstClock *clock = gst_element_get_clock(element);
 
-  /* If gstreamer doesn't provide us with a clock, we simply skip the
+  /* If gstreamer doesn't provide us with a timestamp, we simply skip the
    * stabilization step */
-  if (!clock) {
+  if (!GST_BUFFER_PTS_IS_VALID(buf)) {
     landmarks = faces_pts[0];
   } else {
-    GstClockTime time = gst_clock_get_time(element->clock);
+    GstClockTime time = GST_BUFFER_PTS(buf);
     GstClockTimeDiff frame_time = time - mozza->prev_time;
     mozza->oe_filter->update(frame_time / 1000000000.0, faces_pts[0], landmarks);
     mozza->prev_time = time;
