@@ -224,13 +224,16 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
 
   GST_DEBUG_OBJECT (mozza, "transform_frame_ip");
 
+  GST_OBJECT_LOCK(mozza);
   mozza->frame_count++;
 
   if (!mozza->face_detector || !mozza->shape_predictor) {
     update_tracker_state(mozza, TRACKER_UNINIT);
+    GST_OBJECT_UNLOCK(mozza);
     return GST_FLOW_OK;
   } else if (mozza->deformations.empty()) {
     update_tracker_state(mozza, TRACKER_NO_DEFORM);
+    GST_OBJECT_UNLOCK(mozza);
     return GST_FLOW_OK;
   }
 
@@ -247,11 +250,15 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
    * Crude but effective on the short short term.
    * Maybe Restart the stream after a second even if we can't reacquire? */
   if (dets.empty()) {
+    GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_NO_FACES);
-    return mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
+    return res;
+    GST_OBJECT_UNLOCK(mozza);
   } else if (dets.size() > 1) {
+    GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_MANY_FACES);
-    return mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
+    GST_OBJECT_UNLOCK(mozza);
+    return res;
   }
 
   std::vector<std::vector<cv::Point2f>> faces_pts;
@@ -287,6 +294,9 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   update_tracker_state(mozza, TRACKER_OK);
   // TODO figure out if cv_img.release() would actually be needed here
   // (it's already called in gst_opencv_video_filter_finalize())
+
+  GST_OBJECT_UNLOCK(mozza);
+
   return GST_FLOW_OK;
 }
 
@@ -298,6 +308,7 @@ gst_mozza_set_property (GObject * object, guint property_id,
 
   GST_DEBUG_OBJECT (mozza, "set_property");
 
+  GST_OBJECT_LOCK(mozza);
   switch (property_id) {
     case PROP_SHAPE_MODEL:
       g_free(mozza->shape_model);
@@ -345,6 +356,7 @@ gst_mozza_set_property (GObject * object, guint property_id,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+  GST_OBJECT_UNLOCK(mozza);
 }
 
 void
@@ -355,6 +367,7 @@ gst_mozza_get_property (GObject * object, guint property_id,
 
   GST_DEBUG_OBJECT (mozza, "get_property");
 
+  GST_OBJECT_LOCK(mozza);
   switch (property_id) {
     case PROP_SHAPE_MODEL:
       g_value_set_string (value, mozza->shape_model);
@@ -387,6 +400,7 @@ gst_mozza_get_property (GObject * object, guint property_id,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+  GST_OBJECT_UNLOCK(mozza);
 }
 
 void
