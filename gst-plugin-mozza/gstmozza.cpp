@@ -274,7 +274,7 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   } else {
     GstClockTime time = gst_clock_get_time(element->clock);
     GstClockTimeDiff frame_time = time - mozza->prev_time;
-    mozza->oe_filter->update(GST_TIME_AS_SECONDS(frame_time), faces_pts[0], landmarks);
+    mozza->oe_filter->update(frame_time / 1000000000.0, faces_pts[0], landmarks);
     mozza->prev_time = time;
   }
 
