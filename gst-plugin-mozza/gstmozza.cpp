@@ -292,8 +292,6 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   }
 
   update_tracker_state(mozza, TRACKER_OK);
-  // TODO figure out if cv_img.release() would actually be needed here
-  // (it's already called in gst_opencv_video_filter_finalize())
 
   GST_OBJECT_UNLOCK(mozza);
 
