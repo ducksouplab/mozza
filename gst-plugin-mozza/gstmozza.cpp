@@ -177,7 +177,7 @@ gst_mozza_class_init (GstMozzaClass * klass)
 static void
 gst_mozza_init (GstMozza *mozza)
 {
-  mozza->shape_model = (gchar*)DEFAULT_SHAPE_MODEL_PATH;
+  mozza->shape_model = g_strdup(DEFAULT_SHAPE_MODEL_PATH);
   mozza->shape_predictor = new dlib::shape_predictor;
   try {
     dlib::deserialize (mozza->shape_model) >> *mozza->shape_predictor;
@@ -193,7 +193,7 @@ gst_mozza_init (GstMozza *mozza)
   mozza->alpha = 1.f;
   mozza->face_thresh = 0.15;
   mozza->overlay = FALSE;
-  mozza->user_id = (gchar*)"0";
+  mozza->user_id = g_strdup("0");
 
   mozza->resize_rate = 1.f;
 
@@ -300,6 +300,9 @@ gst_mozza_set_property (GObject * object, guint property_id,
 
   switch (property_id) {
     case PROP_SHAPE_MODEL:
+      g_free(mozza->shape_model);
+      if (mozza->shape_predictor)
+        delete mozza->shape_predictor;
       mozza->shape_model = g_value_dup_string(value);
       mozza->shape_predictor = new dlib::shape_predictor;
       try {
@@ -315,9 +318,11 @@ gst_mozza_set_property (GObject * object, guint property_id,
       mozza->drop = g_value_get_boolean(value);
       break;
     case PROP_USER_ID:
+      g_free(mozza->user_id);
       mozza->user_id = g_value_dup_string(value);
       break;
     case PROP_DEFORM:
+      g_free(mozza->deform_file);
       mozza->deform_file = g_value_dup_string(value);
       import_deformations(mozza->deform_file, mozza->deformations);
       break;
@@ -400,6 +405,12 @@ gst_mozza_finalize (GObject * object)
     delete mozza->mls;
   if (mozza->oe_filter)
     delete mozza->oe_filter;
+
+  g_free(mozza->shape_model);
+  g_free(mozza->user_id);
+  g_free(mozza->deform_file);
+
+  mozza->deformations.~std::vector<Deformation>();
 
   G_OBJECT_CLASS (gst_mozza_parent_class)->finalize (object);
 }
