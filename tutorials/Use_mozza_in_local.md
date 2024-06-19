@@ -11,7 +11,7 @@ Create a new folder called YOUR_FOLDER
 
 Download the `shape_predictor_68_face_landmarks.dat` model file. It can be found online at [http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2](https://github.com/ducksouplab/mozza/blob/main), or on debian distributions, it will have been provided by the libdlib-data package.
 
-Check the "Use mozza with Docker" part of the documentation [here](https://github.com/ducksouplab/mozza) . Make sure you can login to docker and pull mozza docker image:
+Check the "Use mozza with Docker" part of the documentation [here](https://github.com/ducksouplab/mozza). Make sure you can login to docker and pull mozza docker image:
 ```
 docker login
 docker pull ducksouplab/mozza:latest
@@ -55,11 +55,11 @@ def_file = "smile10.dfm"
 transform_img_with_mozza(container_folder, source, target, wait=True, deformation_file=def_file, alpha=1, face_thresh=0.25 , overlay=False , beta=0.1, fc=5.0)
 ```
 
-Or the following video manipulation script:
+Or the following video manipulation script (add a video_in.mp4 file):
 ```
 container_folder = "ABSOLUTE_PATH_TO_YOUR_FOLDER/data"
-source = "ID116_vid2_downsized.mp4"
-target = "ID116_vid2_downsized_smile.mp4"
+source = "video_in.mp4"
+target = "video_out.mp4"
 def_file = "smile10.dfm"
 transform_video_with_mozza(container_folder, source, target, wait=True, deformation_file=def_file, alpha=2.5, face_thresh=0.25 , overlay=False , beta=0.1, fc=5.0)
 ```
