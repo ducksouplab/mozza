@@ -1,4 +1,4 @@
-# Use Mozza in Local using Docker
+# Use Mozza in Local and offline using Docker
 
 This is a tutorial to run you through the steps to use Mozza with python.
 
