@@ -18,21 +18,32 @@ docker pull ducksouplab/mozza:latest
 ```
 
 Create a new conda environement for mozza:
-- conda create --name mozza python=3.9 ipython jupyter
+```
+conda create --name mozza python=3.9 ipython jupyter
+```
 
-Clone the python wrapper repository : git clone https://github.com/Pablo-Arias/STIM.git
+Clone the python wrapper repository : 
+```
+git clone https://github.com/Pablo-Arias/STIM.git
+```
 
-Add the python wrapper to the path of your environment:
-- conda develop ABSOLUTE_PATH_TO_YOUR_FOLDER/stim  
+Add the python wrapper to the path of your environment (replace ABSOLUTE_PATH_TO_YOUR_FOLDER with your actual path):
+```
+conda develop ABSOLUTE_PATH_TO_YOUR_FOLDER/stim  
+```
 
 Crete a folder to transfer data:
-- mkdir -p data/in data/out
+```
+mkdir -p data/in data/out
+```
 
 Make sure you have the files:
-- source = "neutral.png" # A neutral face to transform
-- def_file = "smile10.dfm" # Deformation file to use
+```
+source = "neutral.png" # A neutral face to transform
+def_file = "smile10.dfm" # Deformation file to use
+```
 
-Create a new python script and test the following image manipulation:
+Create a new python script and test the following image manipulation script:
 ```
 from mozza_wrapper import transform_img_with_mozza, transform_video_with_mozza
 
@@ -44,7 +55,7 @@ def_file = "smile10.dfm"
 transform_img_with_mozza(container_folder, source, target, wait=True, deformation_file=def_file, alpha=1, face_thresh=0.25 , overlay=False , beta=0.1, fc=5.0)
 ```
 
-Create a new python script and test the following video manipulation:
+Or the following video manipulation script:
 ```
 container_folder = "ABSOLUTE_PATH_TO_YOUR_FOLDER/data"
 source = "ID116_vid2_downsized.mp4"
