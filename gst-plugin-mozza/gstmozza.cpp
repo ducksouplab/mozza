@@ -177,7 +177,7 @@ gst_mozza_class_init (GstMozzaClass * klass)
 static void
 gst_mozza_init (GstMozza *mozza)
 {
-  mozza->shape_model = (gchar*)DEFAULT_SHAPE_MODEL_PATH;
+  mozza->shape_model = g_strdup(DEFAULT_SHAPE_MODEL_PATH);
   mozza->shape_predictor = new dlib::shape_predictor;
   try {
     dlib::deserialize (mozza->shape_model) >> *mozza->shape_predictor;
@@ -193,7 +193,7 @@ gst_mozza_init (GstMozza *mozza)
   mozza->alpha = 1.f;
   mozza->face_thresh = 0.15;
   mozza->overlay = FALSE;
-  mozza->user_id = (gchar*)"0";
+  mozza->user_id = g_strdup("0");
 
   mozza->resize_rate = 1.f;
 
@@ -224,13 +224,16 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
 
   GST_DEBUG_OBJECT (mozza, "transform_frame_ip");
 
+  GST_OBJECT_LOCK(mozza);
   mozza->frame_count++;
 
   if (!mozza->face_detector || !mozza->shape_predictor) {
     update_tracker_state(mozza, TRACKER_UNINIT);
+    GST_OBJECT_UNLOCK(mozza);
     return GST_FLOW_OK;
   } else if (mozza->deformations.empty()) {
     update_tracker_state(mozza, TRACKER_NO_DEFORM);
+    GST_OBJECT_UNLOCK(mozza);
     return GST_FLOW_OK;
   }
 
@@ -247,27 +250,30 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
    * Crude but effective on the short short term.
    * Maybe Restart the stream after a second even if we can't reacquire? */
   if (dets.empty()) {
+    GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_NO_FACES);
-    return mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
+    return res;
+    GST_OBJECT_UNLOCK(mozza);
   } else if (dets.size() > 1) {
+    GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_MANY_FACES);
-    return mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
+    GST_OBJECT_UNLOCK(mozza);
+    return res;
   }
 
   std::vector<std::vector<cv::Point2f>> faces_pts;
   find_landmarks(blurred_img, *mozza->shape_predictor, dets, faces_pts);
 
   std::vector<cv::Point2f> landmarks;
-  GstClock *clock = gst_element_get_clock(element);
 
-  /* If gstreamer doesn't provide us with a clock, we simply skip the
+  /* If gstreamer doesn't provide us with a timestamp, we simply skip the
    * stabilization step */
-  if (!clock) {
+  if (!GST_BUFFER_PTS_IS_VALID(buf)) {
     landmarks = faces_pts[0];
   } else {
-    GstClockTime time = gst_clock_get_time(element->clock);
+    GstClockTime time = GST_BUFFER_PTS(buf);
     GstClockTimeDiff frame_time = time - mozza->prev_time;
-    mozza->oe_filter->update(GST_TIME_AS_SECONDS(frame_time), faces_pts[0], landmarks);
+    mozza->oe_filter->update(frame_time / 1000000000.0, faces_pts[0], landmarks);
     mozza->prev_time = time;
   }
 
@@ -285,8 +291,9 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   }
 
   update_tracker_state(mozza, TRACKER_OK);
-  // TODO figure out if cv_img.release() would actually be needed here
-  // (it's already called in gst_opencv_video_filter_finalize())
+
+  GST_OBJECT_UNLOCK(mozza);
+
   return GST_FLOW_OK;
 }
 
@@ -298,8 +305,12 @@ gst_mozza_set_property (GObject * object, guint property_id,
 
   GST_DEBUG_OBJECT (mozza, "set_property");
 
+  GST_OBJECT_LOCK(mozza);
   switch (property_id) {
     case PROP_SHAPE_MODEL:
+      g_free(mozza->shape_model);
+      if (mozza->shape_predictor)
+        delete mozza->shape_predictor;
       mozza->shape_model = g_value_dup_string(value);
       mozza->shape_predictor = new dlib::shape_predictor;
       try {
@@ -315,9 +326,11 @@ gst_mozza_set_property (GObject * object, guint property_id,
       mozza->drop = g_value_get_boolean(value);
       break;
     case PROP_USER_ID:
+      g_free(mozza->user_id);
       mozza->user_id = g_value_dup_string(value);
       break;
     case PROP_DEFORM:
+      g_free(mozza->deform_file);
       mozza->deform_file = g_value_dup_string(value);
       import_deformations(mozza->deform_file, mozza->deformations);
       break;
@@ -340,6 +353,7 @@ gst_mozza_set_property (GObject * object, guint property_id,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+  GST_OBJECT_UNLOCK(mozza);
 }
 
 void
@@ -350,6 +364,7 @@ gst_mozza_get_property (GObject * object, guint property_id,
 
   GST_DEBUG_OBJECT (mozza, "get_property");
 
+  GST_OBJECT_LOCK(mozza);
   switch (property_id) {
     case PROP_SHAPE_MODEL:
       g_value_set_string (value, mozza->shape_model);
@@ -382,6 +397,7 @@ gst_mozza_get_property (GObject * object, guint property_id,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, property_id, pspec);
       break;
   }
+  GST_OBJECT_UNLOCK(mozza);
 }
 
 void
@@ -400,6 +416,12 @@ gst_mozza_finalize (GObject * object)
     delete mozza->mls;
   if (mozza->oe_filter)
     delete mozza->oe_filter;
+
+  g_free(mozza->shape_model);
+  g_free(mozza->user_id);
+  g_free(mozza->deform_file);
+
+  mozza->deformations.~std::vector<Deformation>();
 
   G_OBJECT_CLASS (gst_mozza_parent_class)->finalize (object);
 }
