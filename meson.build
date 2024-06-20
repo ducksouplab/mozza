@@ -5,12 +5,12 @@ project('mozza', 'c', 'cpp',
 
 cxx = meson.get_compiler('cpp')
 
-sse2_args = '-msse2'
-sse41_args = '-msse4.1'
-avx_args = '-mavx'
-
 cxx_args = []
 if host_machine.cpu_family().startswith('x86')
+  sse2_args = '-msse2'
+  sse41_args = '-msse4.1'
+  avx_args = '-mavx'
+
   if cxx.has_argument(sse2_args)
     cxx_args += sse2_args
   endif
@@ -47,7 +47,6 @@ gstbase_dep = dependency('gstreamer-base-1.0', version : gst_req,
 gstvideo_dep = dependency('gstreamer-video-1.0', version : gst_req,
   fallback : ['gst-plugins-base', 'video_dep'])
 gstopencv_dep = cxx.find_library('gstopencv-1.0', required : true)
-
 
 subdir('lib')
 subdir('templater')

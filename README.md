@@ -205,6 +205,9 @@ Use the deformation file and process an image:
 docker run -v "$(pwd)"/data:/data ducksouplab/mozza:latest gst-launch-1.0 filesrc location=/data/in/test.png ! decodebin ! videoconvert ! mozza deform=/data/out/test.dfm alpha=1 ! videoconvert ! jpegenc ! filesink location=/data/out/transformed.jpg
 ```
 
+## Check the turials
+Check a tutorial that runs you through each step to use mozza in local in [this link](https://github.com/ducksouplab/mozza/blob/main/tutorials/Use_mozza_in_local.md)
+
 ## Additional: run mozza by entering container
 
 Enter the container:
@@ -219,7 +222,16 @@ _From now on, you're in the container shell_
 ```
 mozza-templater -b -m /usr/share/dlib/shape_predictor_68_face_landmarks.dat -n /data/in/neutral.png -s /data/in/smile.png -o /data/out/test.dfm
 
+# inspect by plugin file
+gst-inspect-1.0 build/libgstmozza.so
+
+# inspect by plugin name (since libgstaltavoce.so is in GST_PLUGIN_PATH)
+gst-inspect-1.0 mozza
+
+
 gst-launch-1.0 filesrc location=/data/in/test.png ! decodebin ! videoconvert ! mozza deform=/data/out/test.dfm alpha=1 ! videoconvert ! jpegenc ! filesink location=/data/out/transformed.jpg
+
+
 ```
 
 Exit container:

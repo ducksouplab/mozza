@@ -17,10 +17,19 @@ docker login
 docker pull ducksouplab/mozza:latest
 ```
 
+If you are using arm architecture (e.g. an M1 mac ) do
+```
+docker pull ducksouplab/mozza:M1_latest
+```
+
 Create a new conda environement for mozza:
 ```
+#create envrionemnt
 conda create --name mozza python=3.9 ipython jupyter
+#activate the environemnt
+source activate mozza 
 ```
+
 
 Clone the python wrapper repository : 
 ```
@@ -65,6 +74,32 @@ transform_video_with_mozza(container_folder, source, target, wait=True, deformat
 ```
 
 Play with parameters. Parameters files are described here : https://github.com/ducksouplab/mozza?tab=readme-ov-file#running-the-plugin
+
+
+# M1 Mac users
+Note : if you are running on an ARM mac, you might need to rebuild the docker image to your ARM architecture:
+
+To do this:
+```
+#clone mozza repo
+git clone https://github.com/ducksouplab/mozza.git
+
+#move to the mozza repository
+cd mozza
+
+#build the docjer image for your platform
+docker build --progress=plain -f docker/MacDockerfile.build --platform linux/arm64/v8 -t mozza:latest .
+
+#inspect the plugin you just built
+docker run -it mozza:latest gst-inspect-1.0 build/libgstmozza.so
+
+#inspect by plugin name (since libgstaltavoce.so is in GST_PLUGIN_PATH)
+docker run -it mozza:latest gst-inspect-1.0 mozza
+
+docker tag mozza:latest ducksouplab/mozza:latest
+
+```
+
 
 
 
