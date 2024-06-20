@@ -46,7 +46,7 @@ Crete a folder to transfer data:
 mkdir -p data/in data/out
 ```
 
-Make sure you have the files:
+Make sure you have the files (examples of these files can be found in the repo in "data/in".
 ```
 source = "neutral.png" # A neutral face to transform
 def_file = "smile10.dfm" # Deformation file to use
