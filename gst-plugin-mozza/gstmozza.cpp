@@ -249,11 +249,13 @@ gst_mozza_transform_frame_ip (GstOpencvVideoFilter * filter, GstBuffer * buf, cv
   /* If we fail to find any faces, simply drop the frame.
    * Crude but effective on the short short term.
    * Maybe Restart the stream after a second even if we can't reacquire? */
-  if (dets.empty()) {
+   // This was not working in gstreamer 1.24, so I removed this feature. We would need to implement a real frame dropping.
+  if (dets.empty()) { 
     GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_NO_FACES);
-    return res;
     GST_OBJECT_UNLOCK(mozza);
+    return res;
+    
   } else if (dets.size() > 1) {
     GstFlowReturn res = mozza->drop ? GST_BASE_TRANSFORM_FLOW_DROPPED : GST_FLOW_OK;
     update_tracker_state(mozza, TRACKER_MANY_FACES);
@@ -421,7 +423,8 @@ gst_mozza_finalize (GObject * object)
   g_free(mozza->user_id);
   g_free(mozza->deform_file);
 
-  //mozza->deformations.~std::vector<Deformation>(); # Remove this because it has compiling issues
+  //mozza->deformations.~std::vector<Deformation>(); Change with mozza->deformations.clear(); for gstreamer 1.25 compilation
+  mozza->deformations.clear();
 
   G_OBJECT_CLASS (gst_mozza_parent_class)->finalize (object);
 }

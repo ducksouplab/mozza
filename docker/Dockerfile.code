@@ -1,4 +1,6 @@
-FROM ducksouplab/debian-gstreamer:deb11-cuda12.4-gst1.22.10
+##FROM ducksouplab/debian-gstreamer:deb11-cuda12.4-gst1.22.10
+FROM ducksouplab/debian-gstreamer:deb12-cuda12.2-plugins-gst1.24.10
+
 
 RUN apt-get update
 RUN apt-get upgrade -y

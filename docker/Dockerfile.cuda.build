@@ -1,4 +1,5 @@
 FROM ubuntu-cuda-gstreamer:ubuntu22.04-cuda11.7.0-gstreamer1.22.7
+#FROM ducksouplab/debian-gstreamer:deb12-cuda12.2-plugins-gst1.24.10
 
 RUN apt-get update
 RUN apt-get upgrade -y
