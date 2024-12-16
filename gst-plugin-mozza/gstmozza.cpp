@@ -421,7 +421,7 @@ gst_mozza_finalize (GObject * object)
   g_free(mozza->user_id);
   g_free(mozza->deform_file);
 
-  mozza->deformations.~std::vector<Deformation>();
+  //mozza->deformations.~std::vector<Deformation>(); # Remove this because it has compiling issues
 
   G_OBJECT_CLASS (gst_mozza_parent_class)->finalize (object);
 }

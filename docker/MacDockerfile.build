@@ -22,7 +22,9 @@ RUN apt-get update && apt-get install -y \
     libgstreamer-plugins-base1.0-dev \
     gstreamer1.0-plugins-base-apps \
     gstreamer1.0-plugins-bad-faad \
-    gstreamer1.0-opencv
+    gstreamer1.0-opencv \
+    g++ \
+    cmake
 
 # Install dlib and its default model
 RUN apt-get update && apt-get install -y libdlib-data
@@ -73,5 +75,7 @@ ENV PATH="${PATH}:/gstmozza/build"
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/gstmozza/build/lib/aarch64-linux-gnu"
 ENV GST_PLUGIN_PATH="${GST_PLUGIN_PATH}:/gstmozza/build"
 
+
 # Default command
 CMD ["bash"]
+

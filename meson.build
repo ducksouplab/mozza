@@ -47,10 +47,12 @@ gstbase_dep = dependency('gstreamer-base-1.0', version : gst_req,
 gstvideo_dep = dependency('gstreamer-video-1.0', version : gst_req,
   fallback : ['gst-plugins-base', 'video_dep'])
 gstopencv_dep = cxx.find_library('gstopencv-1.0', required : true)
+gstcontroller_dep = dependency('gstreamer-controller-1.0', version : gst_req, required: true)
 
 subdir('lib')
 subdir('templater')
 subdir('gst-plugin-mozza')
+subdir('controller')
 
 executable('mozza-templater',
   [templater_src, lib_src],
