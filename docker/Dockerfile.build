@@ -4,7 +4,7 @@ FROM ducksouplab/debian-gstreamer:deb12-cuda12.2-plugins-gst1.24.10
 RUN apt-get update
 RUN apt-get upgrade -y
 
-RUN apt-get update && apt-get install -y build-essential cmake pkg-config git meson ninja-build
+RUN apt-get update && apt-get install -y build-essential cmake pkg-config git meson ninja-build 
 
 # build dependencies
 RUN apt-get update && apt-get install -y libsm-dev libxext-dev

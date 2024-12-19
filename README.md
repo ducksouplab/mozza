@@ -205,7 +205,7 @@ Use the deformation file and process an image:
 docker run -v "$(pwd)"/data:/data ducksouplab/mozza:latest gst-launch-1.0 filesrc location=/data/in/test.png ! decodebin ! videoconvert ! mozza deform=/data/out/test.dfm alpha=1 ! videoconvert ! jpegenc ! filesink location=/data/out/transformed.jpg
 ```
 
-## Check the turials
+## Check the tutorials
 Check a tutorial that runs you through each step to use mozza in local in [this link](https://github.com/ducksouplab/mozza/blob/main/tutorials/Use_mozza_in_local.md)
 
 ## Additional: run mozza by entering container
