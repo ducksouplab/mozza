@@ -1,9 +1,72 @@
 #include <gst/gst.h>
-#include <gst/controller/gstcontroller.h>
-#include <gst/controller/gstinterpolationcontrolsource.h>
 #include <iostream>
+#include <vector>
+#include <string.h>
 
-void on_pad_added(GstElement *element, GstPad *pad, gpointer data);
+// Structure to hold scheduled alpha changes
+struct AlphaChange {
+    GstClockTime time;
+    gdouble alpha;
+};
+
+// Global references to pipeline and changes for simplicity
+static GstElement *pipeline = nullptr;
+static GstElement *mozza = nullptr;
+static std::vector<AlphaChange> changes;
+
+// Callback for new pads in demuxer (unchanged)
+void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
+    GstElement *decoder = (GstElement *)data;
+    GstPad *sinkpad = gst_element_get_static_pad(decoder, "sink");
+    gst_pad_link(pad, sinkpad);
+    gst_object_unref(sinkpad);
+}
+
+// Timeout callback to check if we should apply alpha changes
+static gboolean update_alpha(gpointer user_data) {
+    if (!pipeline) return G_SOURCE_CONTINUE;
+
+    GstFormat fmt = GST_FORMAT_TIME;
+    gint64 pos = 0;
+
+    // Get current pipeline position
+    if (gst_element_query_position(pipeline, fmt, &pos)) {
+        // Apply any changes that are due at or before current position
+        for (auto it = changes.begin(); it != changes.end();) {
+            if (it->time <= (GstClockTime)pos) {
+                g_object_set(mozza, "alpha", it->alpha, NULL);
+                it = changes.erase(it);
+            } else {
+                ++it;
+            }
+        }
+    }
+
+    // Stop the callback if no more changes remain
+    return changes.empty() ? G_SOURCE_REMOVE : G_SOURCE_CONTINUE;
+}
+
+// Bus callback to listen for EOS or ERROR
+static gboolean bus_callback(GstBus *bus, GstMessage *msg, gpointer loop) {
+    switch (GST_MESSAGE_TYPE(msg)) {
+        case GST_MESSAGE_EOS:
+            g_main_loop_quit((GMainLoop*)loop);
+            break;
+        case GST_MESSAGE_ERROR: {
+            GError *err;
+            gchar *dbg;
+            gst_message_parse_error(msg, &err, &dbg);
+            g_printerr("Error: %s\n", err->message);
+            g_error_free(err);
+            g_free(dbg);
+            g_main_loop_quit((GMainLoop*)loop);
+            break;
+        }
+        default:
+            break;
+    }
+    return TRUE;
+}
 
 int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
@@ -30,8 +93,7 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    GstElement *pipeline = nullptr;
-    GstElement *src = nullptr, *demuxer = nullptr, *decoder = nullptr, *convert = nullptr, *mozza = nullptr, *sink = nullptr;
+    GstElement *src = nullptr, *demuxer = nullptr, *decoder = nullptr, *convert = nullptr, *sink = nullptr;
 
     if (pipeline_desc) {
         GError *error = NULL;
@@ -39,8 +101,15 @@ int main(int argc, char *argv[]) {
         if (error) {
             g_printerr("Error parsing pipeline: %s\n", error->message);
             g_error_free(error);
+            g_strfreev(times_str);
+            g_strfreev(alphas_str);
             return -1;
         }
+
+        // In this case, mozza should be part of pipeline_desc
+        // Use gst_bin_get_by_name(GST_BIN(pipeline), "mozza") if mozza has a unique name
+        mozza = gst_bin_get_by_name(GST_BIN(pipeline), "mozza");
+
     } else {
         pipeline = gst_pipeline_new("mozza-pipeline");
         src = gst_element_factory_make("filesrc", "source");
@@ -52,6 +121,8 @@ int main(int argc, char *argv[]) {
 
         if (!pipeline || !src || !demuxer || !decoder || !convert || !mozza || !sink) {
             g_printerr("Not all elements could be created\n");
+            g_strfreev(times_str);
+            g_strfreev(alphas_str);
             return -1;
         }
 
@@ -60,52 +131,55 @@ int main(int argc, char *argv[]) {
         g_object_set(mozza, "deform-file", deform_file, NULL);
 
         gst_bin_add_many(GST_BIN(pipeline), src, demuxer, decoder, convert, mozza, sink, NULL);
-        if (!gst_element_link(src, demuxer) || !gst_element_link(decoder, convert) || !gst_element_link(convert, mozza) || !gst_element_link(mozza, sink)) {
+        if (!gst_element_link(src, demuxer) ||
+            !gst_element_link(decoder, convert) ||
+            !gst_element_link(convert, mozza) ||
+            !gst_element_link(mozza, sink)) {
             g_printerr("Elements could not be linked\n");
             gst_object_unref(pipeline);
+            g_strfreev(times_str);
+            g_strfreev(alphas_str);
             return -1;
         }
 
         g_signal_connect(demuxer, "pad-added", G_CALLBACK(on_pad_added), decoder);
     }
 
-    GstControlSource *control_source = gst_interpolation_control_source_new();
-    GstInterpolationControlSource *alpha_control_source = GST_INTERPOLATION_CONTROL_SOURCE(control_source);
-
-    if (!alpha_control_source) {
-        g_printerr("Failed to create control source\n");
-        gst_object_unref(pipeline);
-        g_strfreev(times_str);
-        g_strfreev(alphas_str);
-        return -1;
-    }
-
-    gst_object_add_control_binding(GST_OBJECT(mozza),
-        gst_direct_control_binding_new(GST_OBJECT(mozza), "alpha", GST_CONTROL_SOURCE(alpha_control_source)));
-
+    // Store alpha changes
     for (gint i = 0; i < n_times; i++) {
-        GstClockTime time = g_ascii_strtoull(times_str[i], NULL, 10) * GST_SECOND;
-        gdouble alpha = g_ascii_strtod(alphas_str[i], NULL);
+        GstClockTime change_time = g_ascii_strtoull(times_str[i], NULL, 10) * GST_SECOND;
+        gdouble alpha_value = g_ascii_strtod(alphas_str[i], NULL);
 
-        gst_timed_value_control_source_set(GST_TIMED_VALUE_CONTROL_SOURCE(alpha_control_source), time, alpha);
+        AlphaChange ac { change_time, alpha_value };
+        changes.push_back(ac);
     }
 
     g_strfreev(times_str);
     g_strfreev(alphas_str);
 
+    // Set the pipeline to playing and run a main loop
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     g_print("Running...\n");
-    gst_element_get_state(pipeline, NULL, NULL, -1);
 
+    GMainLoop *loop = g_main_loop_new(NULL, FALSE);
+
+    // Add a bus watch to listen for EOS or ERROR
+    GstBus *bus = gst_element_get_bus(pipeline);
+    gst_bus_add_watch(bus, bus_callback, loop);
+    gst_object_unref(bus);
+
+    // Setup the timeout to update alpha values periodically (every 100 ms)
+    if (!changes.empty()) {
+        g_timeout_add(100, update_alpha, NULL);
+    }
+
+    g_main_loop_run(loop);
+
+    // Cleanup
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(pipeline);
+    if (mozza) gst_object_unref(mozza);
+    g_main_loop_unref(loop);
 
     return 0;
-}
-
-void on_pad_added(GstElement *element, GstPad *pad, gpointer data) {
-    GstElement *decoder = (GstElement *)data;
-    GstPad *sinkpad = gst_element_get_static_pad(decoder, "sink");
-    gst_pad_link(pad, sinkpad);
-    gst_object_unref(sinkpad);
 }
