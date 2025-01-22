@@ -1,0 +1,25 @@
+FROM ducksouplab/debian-gstreamer:deb12-with-plugins-gst1.22.6-arm
+
+RUN apt-get update && apt-get upgrade -y
+
+RUN apt-get update && apt-get install -y \
+    build-essential cmake pkg-config git meson ninja-build
+
+# build dependencies
+RUN apt-get update && apt-get install -y libsm-dev libxext-dev
+
+# dlib default model
+RUN apt-get update && apt-get install -y libdlib-data
+
+WORKDIR /gstmozza
+COPY . .
+
+# Use the recommended setup command for Meson
+RUN meson setup build -Dbuildtype=release
+RUN ninja -C build
+
+ENV PATH="${PATH}:/gstmozza/build"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/gstmozza/build/lib/arm-linux-gnueabihf"
+ENV GST_PLUGIN_PATH="${GST_PLUGIN_PATH}:/gstmozza/build"
+
+CMD ["bash"]

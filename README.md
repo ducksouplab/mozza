@@ -179,13 +179,20 @@ docker tag mozza:latest ducksouplab/mozza:latest
 docker push ducksouplab/mozza:latest
 ```
 
-3. Create image from cuda ubuntu
+3. Compile for ARM architectures
+
+docker build --progress=plain -f docker/ArmDockerfile.build -t mozza:cuda-latest .
+docker tag mozza:latest ducksouplab/mozza:arm_latest
+docker push ducksouplab/mozza:arm_latest
+
+
+4. Create image from cuda ubuntu
 
 ```
 docker build --progress=plain -f docker/Dockerfile.cuda.build -t mozza:cuda-latest .
 ```
 
-4. Run mozza templater and pipeline from host
+5. Run mozza templater and pipeline from host
 
 Create a folder that will be used to store mozza generated files:
 
