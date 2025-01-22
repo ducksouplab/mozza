@@ -181,8 +181,8 @@ docker push ducksouplab/mozza:latest
 
 3. Compile for ARM architectures
 
-docker build --progress=plain -f docker/ArmDockerfile.build -t mozza:cuda-latest .
-docker tag mozza:latest ducksouplab/mozza:arm_latest
+docker build --progress=plain -f docker/ArmDockerfile.build -t mozza:arm_latest .
+docker tag mozza:arm_latest ducksouplab/mozza:arm_latest
 docker push ducksouplab/mozza:arm_latest
 
 
